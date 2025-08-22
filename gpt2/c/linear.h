@@ -5,10 +5,37 @@
 
 //the lienar layer. 
 typedef struct Linear {
-    float *weight; 
-    int vocab_size;
-    int emb_dim;
+    float *weight;  // Shape: (features_out, features_in) stored as 1D array
+    float *bias;    // Shape: (features_out,)
+    int d_in;
+    int d_out;
+
+    void (* init)(struct Linear *linear, int d_in, int d_out, bool has_bias);
+    float* (* forward)(struct Linear *linear, float *x);
+} Linear;
+
+// Helper: access weight[row][col] as weight[row * features_in + col]
+float get_weight(Linear *linear, int row, int col) {
+    return linear->weight[row * linear->d_in + col];
+}
+
+void init_linear(Linear *linear, int d_in, int d_out, bool has_bias) {
+    linear->d_in = d_in;
+    linear->d_out = d_out;
+    linear->weight = (float*)malloc(d_out * d_in * sizeof(float));
+    linear->bias = has_bias ? (float*)malloc(d_out * sizeof(float)) : NULL;
+
+    // Initialize weight matrix (features_out x features_in)
+    for (int i = 0; i < d_out * d_in; i++) {
+        linear->weight[i] = ((float)rand() / RAND_MAX) * 2.0f - 1.0f;
+    }
+    if (has_bias) {
+        for (int i = 0; i < d_out; i++) {
+            linear->bias[i] = ((float)rand() / RAND_MAX) * 2.0f - 1.0f;
+        }
+    }
+}
+
+float* forward_linear(Linear *linear, float *x) {
     
-    void (* init)(struct Linear *linear, int vocab_size, int emb_dim);
-    float* (* forward)(struct Linear *linear, char *x);
-} Embedding;
+}
