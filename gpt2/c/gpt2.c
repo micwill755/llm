@@ -13,14 +13,14 @@ void buildVocabFromFile(Tokenizer *tokenizer){
         return;
     }
 
-    char *vocab[1000];
+    char *vocab[10000];
     int vocab_size = 0;
     char line[1000];
     
     // Build vocab from file
     while (fgets(line, sizeof(line), file)) {
         char *word = strtok(line, " \n\t");
-        while (word && vocab_size < 1000) {
+        while (word && vocab_size < 10000) {
             // Check if word already exists
             int exists = 0;
             for (int i = 0; i < vocab_size; i++) {
@@ -70,4 +70,5 @@ int main(int argc, char *argv[]) {
 
     GPTModel model;
     GPTModel_init(&model, &config);
+
 }

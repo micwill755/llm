@@ -4,6 +4,7 @@
         "ctype.h": "c",
         "string.h": "c",
         "stdlib.h": "c",
-        "stdio.h": "c"
+        "stdio.h": "c",
+        "layer_norm": "c"
     }
 }
