@@ -37,5 +37,20 @@ void init_linear(Linear *linear, int d_in, int d_out, bool has_bias) {
 }
 
 float* forward_linear(Linear *linear, float *x) {
+    // x: input vector of size d_in
+    // weight: matrix of size (d_out, d_in)
+    // output: vector of size d_out
+    float *output = (float*)malloc(linear->d_out * sizeof(float));
     
+    // Matrix multiplication: output = x @ weight.T + bias
+    for (int i = 0; i < linear->d_out; i++) {
+        output[i] = 0.0f;
+        for (int j = 0; j < linear->d_in; j++) {
+            output[i] += x[j] * linear->weight[i * linear->d_in + j];
+        }
+        if (linear->bias) {
+            output[i] += linear->bias[i];
+        }
+    }
+    return output;
 }
