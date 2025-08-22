@@ -5,6 +5,12 @@
         "string.h": "c",
         "stdlib.h": "c",
         "stdio.h": "c",
-        "layer_norm": "c"
+        "layer_norm": "c",
+        "compare": "cpp",
+        "concepts": "cpp",
+        "type_traits": "cpp",
+        "cmath": "cpp",
+        "limits": "cpp",
+        "new": "cpp"
     }
 }

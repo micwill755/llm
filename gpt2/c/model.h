@@ -25,5 +25,11 @@ void GPTModel_init(GPTModel *model, GPTConfig *config) {
     embedding_init(&model->tok_embeds, config->vocab_size, config->emb_dim);
     embedding_init(&model->pos_embeds, config->context_length, config->emb_dim);
 
+    // check embeddings
     print_embeddings(model->tok_embeds, 5, 5);
+}
+
+int forward(char *text, int *tokens, int in_idx) {
+    
+    return 0;
 }
