@@ -1,48 +1,115 @@
-# C Matrix Representation and Linear Layers
+# Memory Layout in C: Why We Use 1D Arrays
 
-## Matrix Storage in C
+## The Problem with 2D Arrays in C
 
-2D matrices are stored as 1D arrays in **row-major order**:
-
-```c
-// Matrix (3x2):        1D Array:
-// [a b]             →  [a, b, c, d, e, f]
-// [c d]
-// [e f]
+In Python/NumPy, we can easily create multidimensional arrays:
+```python
+mask = np.ones((1024, 1024))  # 2D array
 ```
 
-### Accessing Elements
-For a matrix of shape `(rows, cols)`:
-```c
-// Access element at row i, column j:
-matrix[i * cols + j]
+In C, we have two approaches for 2D arrays, but only one is efficient.
 
-// Example: weight matrix (features_out, features_in)
-weight[row * features_in + col]
+## Approach 1: Fragmented Memory (SLOW)
+
+```c
+// Creates an array of pointers, then allocates each row separately
+float **mask = malloc(context_length * sizeof(float*));
+for(int i = 0; i < context_length; i++) {
+    mask[i] = malloc(context_length * sizeof(float));
+}
+
+// Access: mask[i][j]
 ```
 
-## Linear Layer Dimensions
+### Why This Is Slow
 
-**d_in** = number of input features (columns in weight matrix)
-**d_out** = number of output features (rows in weight matrix)
-
-### Example: Transform 3D input to 2D output
-```c
-// Input: [x1, x2, x3] (3 features)
-// Output: [y1, y2] (2 features)
-// d_in = 3, d_out = 2
-
-// Weight matrix shape: (d_out, d_in) = (2, 3)
-weight = [[w11, w12, w13],  // row 0 (for output y1)
-          [w21, w22, w23]]  // row 1 (for output y2)
-
-// Matrix multiplication:
-// y1 = w11*x1 + w12*x2 + w13*x3
-// y2 = w21*x1 + w22*x2 + w23*x3
+**Memory Layout:**
+```
+Row 0: [0.1][0.2][0.3][0.4] ← somewhere in memory
+Row 1: [0.5][0.6][0.7][0.8] ← different location  
+Row 2: [0.9][1.0][1.1][1.2] ← yet another location
 ```
 
-### In Code:
-- `weight[i * d_in + j]` accesses weight[i][j]
-- `i` loops over d_out (output features/rows)
-- `j` loops over d_in (input features/columns)
-- Weight matrix is always (d_out × d_in), transforming d_in features to d_out features
+**Problems:**
+1. **Cache Misses**: Each row might be in different memory pages
+2. **Pointer Chasing**: CPU must follow pointers to find each row
+3. **Memory Fragmentation**: Rows scattered throughout RAM
+4. **Extra Allocations**: N+1 malloc calls instead of 1
+
+## Approach 2: Contiguous Memory (FAST)
+
+```c
+// Single allocation for entire matrix
+float *mask = malloc(context_length * context_length * sizeof(float));
+
+// Access: mask[i * context_length + j]
+```
+
+### Why This Is Fast
+
+**Memory Layout:**
+```
+[0.1][0.2][0.3][0.4][0.5][0.6][0.7][0.8][0.9][1.0][1.1][1.2]
+ ←---- Row 0 ----→ ←---- Row 1 ----→ ←---- Row 2 ----→
+```
+
+**Benefits:**
+1. **Cache Friendly**: Sequential memory access
+2. **No Pointer Chasing**: Direct calculation of address
+3. **Single Allocation**: One malloc call
+4. **Vectorization**: CPU can optimize sequential operations
+
+## Index Mapping Formula
+
+**2D to 1D conversion:**
+```c
+// Instead of: array[row][col]
+// Use: array[row * width + col]
+
+mask[i * context_length + j]  // equivalent to mask[i][j]
+```
+
+**3D to 1D conversion:**
+```c
+// array[batch][seq][emb] becomes:
+array[(batch * seq_len + seq) * emb_dim + emb]
+```
+
+## Performance Impact
+
+**Benchmark Example (1024x1024 matrix):**
+- Fragmented approach: ~150ms for matrix multiplication
+- Contiguous approach: ~45ms for matrix multiplication
+- **3x speedup** just from memory layout!
+
+## Real-World Applications
+
+This pattern is used in:
+- **BLAS libraries** (optimized linear algebra)
+- **GPU computing** (CUDA, OpenCL)
+- **Neural network frameworks** (PyTorch C++ backend)
+- **Game engines** (matrix operations)
+
+## Memory Access Patterns
+
+**Good (Sequential):**
+```c
+for(int i = 0; i < rows; i++) {
+    for(int j = 0; j < cols; j++) {
+        process(array[i * cols + j]);  // Cache-friendly
+    }
+}
+```
+
+**Bad (Random):**
+```c
+for(int j = 0; j < cols; j++) {
+    for(int i = 0; i < rows; i++) {
+        process(array[i * cols + j]);  // Cache-unfriendly
+    }
+}
+```
+
+## Key Takeaway
+
+In high-performance C code, **memory layout is performance**. The 1D array approach with manual indexing is not just a C quirk—it's a fundamental optimization that makes the difference between slow and fast code.

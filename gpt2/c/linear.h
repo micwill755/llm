@@ -9,9 +9,6 @@ typedef struct Linear {
     float *bias;    // Shape: (features_out,)
     int d_in;
     int d_out;
-
-    void (* init)(struct Linear *linear, int d_in, int d_out, bool has_bias);
-    float* (* forward)(struct Linear *linear, float *x);
 } Linear;
 
 // Helper: access weight[row][col] as weight[row * features_in + col]
@@ -37,7 +34,7 @@ void init_linear(Linear *linear, int d_in, int d_out, bool has_bias) {
     }
 }
 
-float* forward_linear(Linear *linear, float *x) {
+float* forward_linear(Linear *linear, float *x, int batch_size, int seq_len) {
     // x: input vector of size d_in
     // weight: matrix of size (d_out, d_in)
     // output: vector of size d_out
