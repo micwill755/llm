@@ -12,6 +12,23 @@ class Linear:
             out += self.bias
         return out
 
+### LAYER NORMALIZATION
+
+class LayerNorm():
+    def __init__(self, emb_dim):
+        super().__init__()
+        self.eps = 1e-5
+        self.scale = np.ones(emb_dim)
+        self.shift = np.zeros(emb_dim)
+
+    def forward(self, x):
+        mean = x.mean(dim=-1, keepdim=True)
+        var = x.var(dim=-1, keepdim=True, unbiased=False)
+        norm_x = (x - mean) / np.sqrt(var + self.eps)
+        return self.scale * norm_x + self.shift
+
+### LAYER NORMALIZATION
+
 ### ATTENTION
 
 class MultiHeadAttention:

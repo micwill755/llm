@@ -22,6 +22,7 @@ float get_weight(Linear *linear, int row, int col) {
 void init_linear(Linear *linear, int d_in, int d_out, bool has_bias) {
     linear->d_in = d_in;
     linear->d_out = d_out;
+    // d_out is rows, d_in is columns
     linear->weight = (float*)malloc(d_out * d_in * sizeof(float));
     linear->bias = has_bias ? (float*)malloc(d_out * sizeof(float)) : NULL;
 
@@ -46,6 +47,7 @@ float* forward_linear(Linear *linear, float *x) {
     for (int i = 0; i < linear->d_out; i++) {
         output[i] = 0.0f;
         for (int j = 0; j < linear->d_in; j++) {
+            // we do the matrix transpose implicitly:
             output[i] += x[j] * linear->weight[i * linear->d_in + j];
         }
         if (linear->bias) {

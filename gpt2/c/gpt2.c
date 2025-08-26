@@ -70,5 +70,4 @@ int main(int argc, char *argv[]) {
 
     GPTModel model;
     GPTModel_init(&model, &config);
-
 }

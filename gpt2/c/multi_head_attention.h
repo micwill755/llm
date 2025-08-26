@@ -11,3 +11,4 @@ typedef struct MultiHeadAttention {
     void (*init) (int d_in, int d_out, int context_length, int dropout, bool qkv_bias);
     void (*forward) (MultiHeadAttention *attention, char *x);
 } MultiHeadAttention;
+
