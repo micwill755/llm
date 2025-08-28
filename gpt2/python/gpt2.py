@@ -1,5 +1,10 @@
 import numpy as np
 
+### Ma
+
+### LAYER NORMALIZATION
+
+
 class Linear:
     def __init__(self, in_features, out_features, bias=True):
         self.weight = np.random.randn(out_features, in_features)
@@ -30,6 +35,31 @@ class LayerNorm():
 ### LAYER NORMALIZATION
 
 ### ATTENTION
+
+### Causal Attention
+
+class CausalAttention:
+    def __init__ (self, d_in, d_out, context_length, dropout, qkv_bias=False):
+        self.d_out = d_out
+        self.d_in = d_in
+        self.droput = dropout
+
+        self.query = Linear(d_in, d_out, qkv_bias=qkv_bias)
+        self.key = Linear(d_in, d_out, qkv_bias=qkv_bias)
+        self.value = Linear(d_in, d_out, qkv_bias=qkv_bias)
+        self.out_proj = Linear(d_in, d_out)
+        self.mask = np.triu(np.ones(context_length, context_length), k=1)
+
+    def forward(self, x):
+        b, num_tokens, emd_dim = x.shape
+
+        self.query(x)
+        self.key(x)
+        self.value(x)
+
+        #att_scores = x @ query.transpose()
+
+### Causal
 
 class MultiHeadAttention:
     def __init__(self, d_in, d_out, context_length, dropout, num_heads, qkv_bias=False):
