@@ -101,27 +101,29 @@ process attnetion heads in parallel
 '''
 
 # mat mul should handle batches
-def mat_mul_3d(m1, m2):
-    m_d_in, m_d_out = m1.shape
-    m2_d_in, m2_d_out = m2.shape
-    # out will be square the smallest dimension of m2
-    out = np.zeros((m_d_in, m2_d_out))
+def mat_mul_nd(m1, m2):
+    dims1 = list(m1.shape)
+    dims2 = list(m2.shape)
+    # output shape: (heads, m1_rows, m2_cols)
+    out = np.zeros((dims1[0], dims1[1], dims2[2]))
 
-    for row in range(m_d_in):
-        for col2 in range(m2_d_out):
-            s = 0.0
-            for col in range(m_d_out):
-                s += float(m1[row][col] * m2[col][col2])
-            out[row][col2] = s
+    # do we simply need to step down until last 2 dimentions? 
+    #def mat_mul_depth(depth):
+        #for i in range(dims1):
+    # TEMP focus on 3d tensor for now
+    
+    # for each head
+    for h in range(dims1[0]):
+        out[h] = mat_mul(m1[h], m2[h])
 
     return out
 
 def transpose_nd(m, dim1, dim2):
     dims = list(m.shape)
-    out = np.zeros((dims))
     # swap specified dimensions
     dims[dim1], dims[dim2] = dims[dim2], dims[dim1] 
-    
+    out = np.zeros((dims))
+
     def fill_transposed(indices, depth):
         if depth == len(m.shape):
             # Create swapped indices for output
@@ -139,24 +141,33 @@ def transpose_nd(m, dim1, dim2):
 
 def reshape (m, heads, emd_dim):
     num_tokens, d_out = m.shape
-    out = np.zeros((num_tokens, heads, emd_dim))
+    out = np.zeros((heads, num_tokens, emd_dim))
 
-    for token in range(num_tokens):
-        for head in range(heads):
+    for head in range(heads):
+        for token in range(num_tokens):
             start_dim = head * emd_dim
             for dim in range(emd_dim):
-                out[token][head][dim] = m[token][start_dim + dim]
+                out[head][token][dim] = m[token][start_dim + dim]
 
     return out
 
-def apply_mask_3d(m, mask, heads):
-    num_tokens, heads, emd_dim = m.shape
+def apply_mask_nd(m, mask):
+    heads, tokens1, tokens2 = m.shape
+    
+    for h in range(heads):
+        apply_mask(m[h], mask)  # Apply 2D mask to each head
 
-    for row in range(num_tokens):
+def combine_heads(m):
+    heads, num_tokens, head_dim = m.shape
+    out = np.zeros((num_tokens, heads * head_dim))
+
+    for token in range(num_tokens):
         for head in range(heads):
-            for col in range(emd_dim):
-                if mask[row][col] == 0:
-                    m[row][col] = -np.inf
+            start_dim = head * head_dim
+            for dim in range(head_dim):
+                out[token][start_dim + dim] = m[head][token][dim]
+
+    return out
 
 '''# create a 2d np array
 m = np.random.randn(2, 3)
