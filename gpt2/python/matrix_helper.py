@@ -34,6 +34,7 @@ def transpose_1d(arr, d_in, d_out):
 
     return out
 
+# mat mul should handle batches
 def mat_mul(m1, m2):
     m_d_in, m_d_out = m1.shape
     m2_d_in, m2_d_out = m2.shape
@@ -49,8 +50,27 @@ def mat_mul(m1, m2):
 
     return out
 
+def create_mask(height, width):
+    out = np.ones((height, width))
+    s_in = 1
 
-# create a 2d np array
+    for row in range(height):
+        for col in range(s_in, width):
+            out[row][col] = 0
+        s_in += 1
+    
+    return out
+
+def apply_mask(m, mask):
+    d_in, d_out = m.shape
+
+    for row in range(d_in):
+        for col in range(d_out):
+            if mask[row][col] == 0:
+                m[row][col] = -np.inf
+
+
+'''# create a 2d np array
 m = np.random.randn(2, 3)
 print (m)
 # transpose np array in np format
@@ -69,4 +89,4 @@ m2_t = transpose(m2)
 res = mat_mul(m, m2_t)
 print(res.shape)
 print(res)
-print(m @ m2_t)
+print(m @ m2_t)'''

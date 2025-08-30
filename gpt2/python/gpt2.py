@@ -1,4 +1,5 @@
 import numpy as np
+from matrix_helper import transpose, mat_mul, create_mask, apply_mask
 
 ### Ma
 
@@ -12,7 +13,7 @@ class Linear:
     
     # y = mx + b
     def forward(self, x):
-        out = x @ self.weight.T
+        out = mat_mul(x, transpose(self.weight))
         if self.bias is not None:
             out += self.bias
         return out
@@ -38,27 +39,87 @@ class LayerNorm():
 
 ### Causal Attention
 
+def softmax(m):
+    n_tokens_d1, n_tokens_d2 = m.shape
+    out = np.zeros((n_tokens_d1, n_tokens_d2))
+
+    for i in range(n_tokens_d1):
+        sum = 0
+        # first calculate the sum
+        for j in range(n_tokens_d2):
+            sum += np.exp(m[i][j])
+        
+        # then divide each to get weight of 1
+        for j in range(n_tokens_d2):
+            out[i][j] = np.exp(m[i][j]) / sum
+
+    return out
+
+class SelfAttention:
+    def __init__ (self, d_in, d_out, context_length, dropout, qkv_bias=False):
+        self.d_out = d_out
+        self.d_in = d_in
+        self.droput = dropout
+
+        self.query = Linear(d_in, d_out, bias=qkv_bias)
+        self.key = Linear(d_in, d_out, bias=qkv_bias)
+        self.value = Linear(d_in, d_out, bias=qkv_bias)
+        self.out_proj = Linear(d_in, d_out)
+
+    def forward(self, x):
+        b, num_tokens, emd_dim = x.shape
+        results = []
+
+        # temp until we handle parallel
+        for i in range(b):
+            x_batch = x[i]
+
+            query_w = self.query.forward(x_batch)
+            key_w = self.key.forward(x_batch)
+            value_w = self.value.forward(x_batch)
+
+            att_scores = mat_mul(query_w, transpose(key_w))
+            attn_weights = softmax(att_scores)
+            context = mat_mul(attn_weights, value_w)
+            context = self.out_proj.forward(context)
+            results.append(context)
+        
+        return results
+            
+
 class CausalAttention:
     def __init__ (self, d_in, d_out, context_length, dropout, qkv_bias=False):
         self.d_out = d_out
         self.d_in = d_in
         self.droput = dropout
 
-        self.query = Linear(d_in, d_out, qkv_bias=qkv_bias)
-        self.key = Linear(d_in, d_out, qkv_bias=qkv_bias)
-        self.value = Linear(d_in, d_out, qkv_bias=qkv_bias)
+        self.query = Linear(d_in, d_out, bias=qkv_bias)
+        self.key = Linear(d_in, d_out, bias=qkv_bias)
+        self.value = Linear(d_in, d_out, bias=qkv_bias)
         self.out_proj = Linear(d_in, d_out)
-        self.mask = np.triu(np.ones(context_length, context_length), k=1)
+        self.mask = create_mask(context_length, context_length)
 
     def forward(self, x):
         b, num_tokens, emd_dim = x.shape
+        results = []
 
-        self.query(x)
-        self.key(x)
-        self.value(x)
+        # temp until we handle parallel
+        for i in range(b):
+            x_batch = x[i]
 
-        #att_scores = x @ query.transpose()
+            query_w = self.query.forward(x_batch)
+            key_w = self.key.forward(x_batch)
+            value_w = self.value.forward(x_batch)
 
+            att_scores = mat_mul(query_w, transpose(key_w))
+            apply_mask(att_scores, self.mask)
+            attn_weights = softmax(att_scores)
+            context = mat_mul(attn_weights, value_w)
+            context = self.out_proj.forward(context)
+            results.append(context)
+        
+        return results
+        
 ### Causal
 
 class MultiHeadAttention:
@@ -162,12 +223,22 @@ class GPT2Model:
 
 ### MODEL
 
+### Attention test
+
+emd_dim = 5
+x = np.random.randn(1, 3, emd_dim)  # (batch_size=1, num_tokens=3, emb_dim=5)
+
+attention = CausalAttention(emd_dim, emd_dim, 5, 2)
+# x.shape[-2:] we need to remove batch
+res = attention.forward(x)
+print(res)
+
 ### MAIN -------
 
-### Step 1: tokenzier
+'''### Step 1: tokenzier
 
 import tiktoken
-
+import torch
 tokenizer = tiktoken.get_encoding("gpt2")
 batch = []
 txt1 = "Every effort moves you"
@@ -189,4 +260,4 @@ print(logits)
 
 ### Step 2: initialize a model
 
-### MAIN -------
+### MAIN -------'''
