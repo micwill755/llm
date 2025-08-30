@@ -93,6 +93,71 @@ def combine_mat (m1, m2, emd_dim, i):
             m1[row][col] = m2[row][m2_col_i]
             m2_col_i += 1
 
+'''
+
+For learning purposes we will create sepearte functions for handling 3D tensors so we can 
+process attnetion heads in parallel
+
+'''
+
+# mat mul should handle batches
+def mat_mul_3d(m1, m2):
+    m_d_in, m_d_out = m1.shape
+    m2_d_in, m2_d_out = m2.shape
+    # out will be square the smallest dimension of m2
+    out = np.zeros((m_d_in, m2_d_out))
+
+    for row in range(m_d_in):
+        for col2 in range(m2_d_out):
+            s = 0.0
+            for col in range(m_d_out):
+                s += float(m1[row][col] * m2[col][col2])
+            out[row][col2] = s
+
+    return out
+
+def transpose_nd(m, dim1, dim2):
+    dims = list(m.shape)
+    out = np.zeros((dims))
+    # swap specified dimensions
+    dims[dim1], dims[dim2] = dims[dim2], dims[dim1] 
+    
+    def fill_transposed(indices, depth):
+        if depth == len(m.shape):
+            # Create swapped indices for output
+            out_indices = indices[:]
+            out_indices[dim1], out_indices[dim2] = out_indices[dim2], out_indices[dim1]
+            out[tuple(out_indices)] = m[tuple(indices)]
+            return
+        
+        for i in range(m.shape[depth]):
+            indices[depth] = i
+            fill_transposed(indices, depth + 1)
+    
+    fill_transposed([0] * len(m.shape), 0)
+    return out
+
+def reshape (m, heads, emd_dim):
+    num_tokens, d_out = m.shape
+    out = np.zeros((num_tokens, heads, emd_dim))
+
+    for token in range(num_tokens):
+        for head in range(heads):
+            start_dim = head * emd_dim
+            for dim in range(emd_dim):
+                out[token][head][dim] = m[token][start_dim + dim]
+
+    return out
+
+def apply_mask_3d(m, mask, heads):
+    num_tokens, heads, emd_dim = m.shape
+
+    for row in range(num_tokens):
+        for head in range(heads):
+            for col in range(emd_dim):
+                if mask[row][col] == 0:
+                    m[row][col] = -np.inf
+
 '''# create a 2d np array
 m = np.random.randn(2, 3)
 print (m)

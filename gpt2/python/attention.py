@@ -1,5 +1,5 @@
 import numpy as np
-from matrix_helper import transpose, mat_mul, create_mask, apply_mask, split_mat, combine_mat
+from matrix_helper import transpose, mat_mul, create_mask, apply_mask, reshape, combine_mat, transpose_nd
 from linear import Linear
 
 def softmax(m):
@@ -221,16 +221,21 @@ class MultiHeadAttention:
 
             all_context = np.zeros((num_tokens, self.d_out))
 
-            for j in range(self.num_heads):
-                q = split_mat(query_w, self.head_dim, self.head_dim * j)
-                k = split_mat(key_w, self.head_dim, self.head_dim * j)
-                v = split_mat(value_w, self.head_dim, self.head_dim * j)
+            queries = reshape(query_w, self.num_heads, self.head_dim)
+            keys = reshape(key_w, self.num_heads, self.head_dim)
+            values = reshape(value_w, self.num_heads, self.head_dim)
 
-                att_scores = mat_mul(q, transpose(k)) / np.sqrt(self.head_dim)
-                apply_mask(att_scores, self.mask)
-                attn_weights = softmax(att_scores)
-                head_context = mat_mul(attn_weights, v)
-                combine_mat(all_context, head_context,  self.head_dim, self.head_dim * j)
+            # we have to transpose the 3d tensor from [tokens, heads, embeddings] -> [heads, tokens, embeddings]
+            queries = transpose_nd(queries, 0, 1)
+            keys = transpose_nd(keys, 0, 1)
+            values = transpose_nd(values, 0, 1)
+
+            att_scores = mat_mul(queries, transpose_nd(keys, 1, 2)) / np.sqrt(self.head_dim)
+
+            apply_mask(att_scores, self.mask)
+            attn_weights = softmax(att_scores)
+            head_context = mat_mul(attn_weights, values)
+            combine_mat(all_context, head_context,  self.head_dim, self.head_dim * j)
 
             final_context = self.out_proj.forward(all_context)
             results.append(final_context)
