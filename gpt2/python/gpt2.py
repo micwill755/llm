@@ -64,7 +64,7 @@ class SelfAttention:
         self.query = Linear(d_in, d_out, bias=qkv_bias)
         self.key = Linear(d_in, d_out, bias=qkv_bias)
         self.value = Linear(d_in, d_out, bias=qkv_bias)
-        self.out_proj = Linear(d_in, d_out)
+        self.out_proj = Linear(d_out, d_out)
 
     def forward(self, x):
         b, num_tokens, emd_dim = x.shape
@@ -84,7 +84,7 @@ class SelfAttention:
             context = self.out_proj.forward(context)
             results.append(context)
         
-        return results
+        return np.stack(results, axis=0)
             
 
 class CausalAttention:
@@ -96,7 +96,7 @@ class CausalAttention:
         self.query = Linear(d_in, d_out, bias=qkv_bias)
         self.key = Linear(d_in, d_out, bias=qkv_bias)
         self.value = Linear(d_in, d_out, bias=qkv_bias)
-        self.out_proj = Linear(d_in, d_out)
+        self.out_proj = Linear(d_out, d_out)
         self.mask = create_mask(context_length, context_length)
 
     def forward(self, x):
@@ -118,7 +118,7 @@ class CausalAttention:
             context = self.out_proj.forward(context)
             results.append(context)
         
-        return results
+        return np.stack(results, axis=0)
         
 ### Causal
 
