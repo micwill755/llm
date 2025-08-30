@@ -69,6 +69,27 @@ def apply_mask(m, mask):
             if mask[row][col] == 0:
                 m[row][col] = -np.inf
 
+def split_mat (m, emd_dim, i):
+    d_in, d_out = m.shape
+    out = np.zeros((d_in, emd_dim))
+    out_i = 0
+
+    for row in range(d_in):
+        # we are taking elements from a start and end index
+        for col in range(i, emd_dim):
+            out[row][out_i] = m[row][col]
+            out_i += 1
+
+    return out
+
+def combine_mat (m1, m2, emd_dim, i):
+    d_in, d_out = m1.shape
+    m2_col_i = 0
+
+    for row in range(d_in):
+        for col in range(i, emd_dim):
+            m1[row][col] = m2[row][m2_col_i]
+            m2_col_i += 1
 
 '''# create a 2d np array
 m = np.random.randn(2, 3)
