@@ -1,5 +1,5 @@
 import numpy as np
-from attention import CausalAttention, ScaledDotProductAttention
+from attention import CausalAttention, ScaledDotProductAttention, MultiHeadAttention
 from linear import Linear
 
 ### Ma
@@ -81,10 +81,11 @@ class GPT2Model:
 ### Attention test
 
 np.random.seed(42)
-emd_dim = 5
+emd_dim = 512
+num_heads = 5
 x = np.random.randn(1, 3, emd_dim)  # (batch_size=1, num_tokens=3, emb_dim=5)
 
-attention = CausalAttention(emd_dim, emd_dim, 5, 2)
+'''attention = CausalAttention(emd_dim, emd_dim, 5, 2)
 res = attention.forward(x)
 print('CausalAttention')
 print(res)
@@ -92,6 +93,11 @@ print(res)
 attention = ScaledDotProductAttention(emd_dim, emd_dim, 5, 2)
 res = attention.forward(x)
 print('ScaledDotProductAttention')
+print(res)'''
+
+attention = MultiHeadAttention(emd_dim, emd_dim, 5, 2, num_heads)
+res = attention.forward(x)
+print('MultiHeadAttention')
 print(res)
 
 ### MAIN -------

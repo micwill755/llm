@@ -75,6 +75,7 @@ def split_mat (m, emd_dim, i):
     out_i = 0
 
     for row in range(d_in):
+        out_i = 0
         # we are taking elements from a start and end index
         for col in range(i, emd_dim):
             out[row][out_i] = m[row][col]
@@ -87,6 +88,7 @@ def combine_mat (m1, m2, emd_dim, i):
     m2_col_i = 0
 
     for row in range(d_in):
+        m2_col_i = 0
         for col in range(i, emd_dim):
             m1[row][col] = m2[row][m2_col_i]
             m2_col_i += 1
