@@ -12,16 +12,13 @@ class Linear:
         d_out = self.weight.shape[0]
         out = np.zeros((batch_size, num_tokens, d_out))
         
+        weight_t = transpose(self.weight)
+        
         for batch in range(batch_size):
-            for token in range(num_tokens):
-                for out_dim in range(d_out):
-                    sum_val = 0.0
-                    for in_dim in range(emb_dim):
-                        sum_val += x[batch][token][in_dim] * self.weight[out_dim][in_dim]
-                    
-                    if self.bias is not None:
-                        sum_val += self.bias[out_dim]
-                    
-                    out[batch][token][out_dim] = sum_val
+            # Apply mat_mul to each batch's 2D slice
+            out[batch] = mat_mul(x[batch], weight_t)
+            
+            if self.bias is not None:
+                out[batch] = out[batch] + self.bias
         
         return out
