@@ -100,82 +100,53 @@ process attnetion heads in parallel
 
 '''
 
-# mat mul should handle arbitrary dimension
-# TEMP recursive pattern
+# mat mul should handle arbitrary dimensions but we
+# can only do this in python if we are working with 1d arrays
+# like in c
 def mat_mul_nd(m1, m2):
-    # Get shapes
-    shape1 = list(m1.shape)
-    shape2 = list(m2.shape)
+    b, heads, tokens1, dim1 = m1.shape
+    b2, heads2, dim2, tokens2 = m2.shape
+    out = np.zeros((b, heads, tokens1, tokens2))
     
-    # Output shape: all batch dims + (m1_rows, m2_cols)
-    out_shape = shape1[:-2] + [shape1[-2], shape2[-1]]
-    out = np.zeros(out_shape)
+    for batch in range(b):
+        for head in range(heads):
+            out[batch][head] = mat_mul(m1[batch][head], m2[batch][head])
     
-    def multiply_recursive(indices, depth):
-        if depth == len(shape1) - 2:
-            # At the matrix level, do 2D multiplication
-            out[tuple(indices)] = mat_mul(m1[tuple(indices)], m2[tuple(indices)])
-            return
-        
-        # Recurse through batch dimensions
-        for i in range(shape1[depth]):
-            indices[depth] = i
-            multiply_recursive(indices, depth + 1)
-    
-    multiply_recursive([0] * (len(shape1) - 2), 0)
     return out
 
 def transpose_nd(m, dim1, dim2):
-    dims = list(m.shape)
-    # swap specified dimensions
-    dims[dim1], dims[dim2] = dims[dim2], dims[dim1] 
-    out = np.zeros((dims))
-
-    def fill_transposed(indices, depth):
-        if depth == len(m.shape):
-            # Create swapped indices for output
-            out_indices = indices[:]
-            out_indices[dim1], out_indices[dim2] = out_indices[dim2], out_indices[dim1]
-            out[tuple(out_indices)] = m[tuple(indices)]
-            return
-        
-        for i in range(m.shape[depth]):
-            indices[depth] = i
-            fill_transposed(indices, depth + 1)
+    b, d1, d2, d3 = m.shape
+    if dim1 == 1 and dim2 == 2:  # transpose dimensions 1 and 2
+        out = np.zeros((b, d2, d1, d3))
+        for batch in range(b):
+            for i in range(d1):
+                for j in range(d2):
+                    for k in range(d3):
+                        out[batch][j][i][k] = m[batch][i][j][k]
+    elif dim1 == 2 and dim2 == 3:  # transpose dimensions 2 and 3
+        out = np.zeros((b, d1, d3, d2))
+        for batch in range(b):
+            for i in range(d1):
+                for j in range(d2):
+                    for k in range(d3):
+                        out[batch][i][k][j] = m[batch][i][j][k]
+    else:
+        raise NotImplementedError(f"Transpose for dims {dim1}, {dim2} not implemented")
     
-    fill_transposed([0] * len(m.shape), 0)
     return out
 
 def reshape(m, new_shape):
-    # Flatten the input to 1D
-    flat = np.zeros(np.prod(m.shape))
-    
-    def flatten_recursive(indices, depth, flat_idx):
-        if depth == len(m.shape):
-            flat[flat_idx[0]] = m[tuple(indices)]
-            flat_idx[0] += 1
-            return
-        
-        for i in range(m.shape[depth]):
-            indices[depth] = i
-            flatten_recursive(indices, depth + 1, flat_idx)
-    
-    flatten_recursive([0] * len(m.shape), 0, [0])
-    
-    # Reshape to new dimensions
+    b, tokens, d_out = m.shape
+    new_b, new_tokens, new_heads, new_head_dim = new_shape
     out = np.zeros(new_shape)
     
-    def fill_reshaped(indices, depth, flat_idx):
-        if depth == len(new_shape):
-            out[tuple(indices)] = flat[flat_idx[0]]
-            flat_idx[0] += 1
-            return
-        
-        for i in range(new_shape[depth]):
-            indices[depth] = i
-            fill_reshaped(indices, depth + 1, flat_idx)
+    for batch in range(b):
+        for token in range(tokens):
+            for head in range(new_heads):
+                start_dim = head * new_head_dim
+                for dim in range(new_head_dim):
+                    out[batch][token][head][dim] = m[batch][token][start_dim + dim]
     
-    fill_reshaped([0] * len(new_shape), 0, [0])
     return out
 
 def apply_mask_nd(m, mask):
