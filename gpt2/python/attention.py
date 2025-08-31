@@ -9,7 +9,7 @@ def softmax(m):
     for i in range(n_tokens_d1):
         max_val = np.max(m[i])
         sum = 0
-        
+
         # first calculate the sum
         for j in range(n_tokens_d2):
             sum += np.exp(m[i][j] - max_val)
@@ -21,11 +21,12 @@ def softmax(m):
     return out
 
 def softmax_nd(m):
-    heads, n_tokens_d1, n_tokens_d2 = m.shape
-    out = np.zeros((heads, n_tokens_d1, n_tokens_d2))
+    b, heads, n_tokens_d1, n_tokens_d2 = m.shape
+    out = np.zeros((b, heads, n_tokens_d1, n_tokens_d2))
 
-    for h in range(heads):
-        out[h] = softmax(m[h])
+    for batch in range(b):
+        for h in range(heads):
+            out[batch][h] = softmax(m[batch][h])
 
     return out
 
@@ -223,37 +224,34 @@ class MultiHeadAttention:
         results = []
 
         # temp until we handle parallel
-        for i in range(b):
-            x_batch = x[i]
+        query_w = self.query.forward(x)
+        key_w = self.key.forward(x)
+        value_w = self.value.forward(x)
 
-            query_w = self.query.forward(x_batch)
-            key_w = self.key.forward(x_batch)
-            value_w = self.value.forward(x_batch)
+        # reshape full size attention matrices for q, k, v into [heads, tokens, embeddings]
+        queries = reshape(query_w, (b, num_tokens, self.num_heads, self.head_dim))
+        keys = reshape(key_w, (b, num_tokens, self.num_heads, self.head_dim))
+        values = reshape(value_w, (b, num_tokens, self.num_heads, self.head_dim))
 
-            # reshape full size attention matrices for q, k, v into [heads, tokens, embeddings]
-            queries = reshape(query_w, self.num_heads, self.head_dim)
-            keys = reshape(key_w, self.num_heads, self.head_dim)
-            values = reshape(value_w, self.num_heads, self.head_dim)
+        # other attention implementations require this tranposition but we are going to cut it out 
+        # we have to transpose the 3d tensor from [tokens, heads, embeddings] -> [heads, tokens, embeddings]
+        #queries = transpose_nd(queries, 0, 1)
+        #keys = transpose_nd(keys, 0, 1)
+        #values = transpose_nd(values, 0, 1)
 
-            # other attention implementations require this tranposition but we are going to cut it out 
-            # we have to transpose the 3d tensor from [tokens, heads, embeddings] -> [heads, tokens, embeddings]
-            #queries = transpose_nd(queries, 0, 1)
-            #keys = transpose_nd(keys, 0, 1)
-            #values = transpose_nd(values, 0, 1)
+        att_scores = mat_mul_nd(queries, transpose_nd(keys, 2, 3)) / np.sqrt(self.head_dim)
 
-            att_scores = mat_mul_nd(queries, transpose_nd(keys, 1, 2)) / np.sqrt(self.head_dim)
+        apply_mask_nd(att_scores, self.mask)
+        attn_weights = softmax_nd(att_scores)
+        context = mat_mul_nd(attn_weights, values)
 
-            apply_mask_nd(att_scores, self.mask)
-            attn_weights = softmax_nd(att_scores)
-            context = mat_mul_nd(attn_weights, values)
-
-            # other attention implementations require this tranposition but we are going to cut it out 
-            # Shape: (b, num_tokens, num_heads, head_dim)
-            #context_vec = (attn_weights @ values).transpose(1, 2) 
-            
-            # we will then combine the heads to the original attention matrix [heads, tokens, head_dim] -> [tokens, heads * head_dim]
-            combined = combine_heads(context)
-            o = self.out_proj.forward(combined)
-            results.append(o)
+        # other attention implementations require this tranposition but we are going to cut it out 
+        # Shape: (b, num_tokens, num_heads, head_dim)
+        #context_vec = (attn_weights @ values).transpose(1, 2) 
+        
+        # we will then combine the heads to the original attention matrix [heads, tokens, head_dim] -> [tokens, heads * head_dim]
+        combined = combine_heads(context)
+        o = self.out_proj.forward(combined)
+        results.append(o)
         
         return np.stack(results, axis=0)

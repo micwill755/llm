@@ -100,22 +100,29 @@ process attnetion heads in parallel
 
 '''
 
-# mat mul should handle batches
+# mat mul should handle arbitrary dimension
+# TEMP recursive pattern
 def mat_mul_nd(m1, m2):
-    dims1 = list(m1.shape)
-    dims2 = list(m2.shape)
-    # output shape: (heads, m1_rows, m2_cols)
-    out = np.zeros((dims1[0], dims1[1], dims2[2]))
-
-    # do we simply need to step down until last 2 dimentions? 
-    #def mat_mul_depth(depth):
-        #for i in range(dims1):
-    # TEMP focus on 3d tensor for now
+    # Get shapes
+    shape1 = list(m1.shape)
+    shape2 = list(m2.shape)
     
-    # for each head
-    for h in range(dims1[0]):
-        out[h] = mat_mul(m1[h], m2[h])
-
+    # Output shape: all batch dims + (m1_rows, m2_cols)
+    out_shape = shape1[:-2] + [shape1[-2], shape2[-1]]
+    out = np.zeros(out_shape)
+    
+    def multiply_recursive(indices, depth):
+        if depth == len(shape1) - 2:
+            # At the matrix level, do 2D multiplication
+            out[tuple(indices)] = mat_mul(m1[tuple(indices)], m2[tuple(indices)])
+            return
+        
+        # Recurse through batch dimensions
+        for i in range(shape1[depth]):
+            indices[depth] = i
+            multiply_recursive(indices, depth + 1)
+    
+    multiply_recursive([0] * (len(shape1) - 2), 0)
     return out
 
 def transpose_nd(m, dim1, dim2):
@@ -139,33 +146,55 @@ def transpose_nd(m, dim1, dim2):
     fill_transposed([0] * len(m.shape), 0)
     return out
 
-def reshape (m, heads, emd_dim):
-    num_tokens, d_out = m.shape
-    out = np.zeros((heads, num_tokens, emd_dim))
-
-    for head in range(heads):
-        for token in range(num_tokens):
-            start_dim = head * emd_dim
-            for dim in range(emd_dim):
-                out[head][token][dim] = m[token][start_dim + dim]
-
+def reshape(m, new_shape):
+    # Flatten the input to 1D
+    flat = np.zeros(np.prod(m.shape))
+    
+    def flatten_recursive(indices, depth, flat_idx):
+        if depth == len(m.shape):
+            flat[flat_idx[0]] = m[tuple(indices)]
+            flat_idx[0] += 1
+            return
+        
+        for i in range(m.shape[depth]):
+            indices[depth] = i
+            flatten_recursive(indices, depth + 1, flat_idx)
+    
+    flatten_recursive([0] * len(m.shape), 0, [0])
+    
+    # Reshape to new dimensions
+    out = np.zeros(new_shape)
+    
+    def fill_reshaped(indices, depth, flat_idx):
+        if depth == len(new_shape):
+            out[tuple(indices)] = flat[flat_idx[0]]
+            flat_idx[0] += 1
+            return
+        
+        for i in range(new_shape[depth]):
+            indices[depth] = i
+            fill_reshaped(indices, depth + 1, flat_idx)
+    
+    fill_reshaped([0] * len(new_shape), 0, [0])
     return out
 
 def apply_mask_nd(m, mask):
-    heads, tokens1, tokens2 = m.shape
+    b, heads, tokens1, tokens2 = m.shape
     
-    for h in range(heads):
-        apply_mask(m[h], mask)  # Apply 2D mask to each head
+    for batch in range(b):
+        for h in range(heads):
+            apply_mask(m[batch][h], mask)  # Apply 2D mask to each head
 
 def combine_heads(m):
-    heads, num_tokens, head_dim = m.shape
-    out = np.zeros((num_tokens, heads * head_dim))
+    b, heads, num_tokens, head_dim = m.shape
+    out = np.zeros((b, num_tokens, heads * head_dim))
 
-    for token in range(num_tokens):
-        for head in range(heads):
-            start_dim = head * head_dim
-            for dim in range(head_dim):
-                out[token][start_dim + dim] = m[head][token][dim]
+    for batch in range(b):
+        for token in range(num_tokens):
+            for head in range(heads):
+                start_dim = head * head_dim
+                for dim in range(head_dim):
+                    out[batch][token][start_dim + dim] = m[batch][head][token][dim]
 
     return out
 

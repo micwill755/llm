@@ -1,5 +1,5 @@
 import numpy as np
-from matrix_helper import transpose, mat_mul
+from matrix_helper import transpose, mat_mul, reshape
 
 class Linear:
     def __init__(self, d_in, d_out, bias=True):
@@ -8,7 +8,18 @@ class Linear:
     
     # y = mx + b
     def forward(self, x):
-        out = mat_mul(x, transpose(self.weight))
+        batch_size, num_tokens, emb_dim = x.shape
+
+        # Flatten to 2D: (batch_size * num_tokens, emb_dim)
+        x_2d = x.reshape(batch_size * num_tokens, emb_dim)
+        
+        # Apply linear transformation
+        out_2d = mat_mul(x_2d, transpose(self.weight))
+        
+        # Reshape back: (batch_size, num_tokens, d_out)
+        out = out_2d.reshape(batch_size, num_tokens, self.weight.shape[0])
+        
         if self.bias is not None:
-            out += self.bias
+            out = out + self.bias
+            
         return out
