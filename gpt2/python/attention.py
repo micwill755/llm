@@ -9,6 +9,7 @@ def softmax(m):
     for i in range(n_tokens_d1):
         max_val = np.max(m[i])
         sum = 0
+        
         # first calculate the sum
         for j in range(n_tokens_d2):
             sum += np.exp(m[i][j] - max_val)
