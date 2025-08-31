@@ -9,17 +9,19 @@ class Linear:
     # y = mx + b
     def forward(self, x):
         batch_size, num_tokens, emb_dim = x.shape
-
-        # Flatten to 2D: (batch_size * num_tokens, emb_dim)
-        x_2d = x.reshape(batch_size * num_tokens, emb_dim)
+        d_out = self.weight.shape[0]
+        out = np.zeros((batch_size, num_tokens, d_out))
         
-        # Apply linear transformation
-        out_2d = mat_mul(x_2d, transpose(self.weight))
+        for batch in range(batch_size):
+            for token in range(num_tokens):
+                for out_dim in range(d_out):
+                    sum_val = 0.0
+                    for in_dim in range(emb_dim):
+                        sum_val += x[batch][token][in_dim] * self.weight[out_dim][in_dim]
+                    
+                    if self.bias is not None:
+                        sum_val += self.bias[out_dim]
+                    
+                    out[batch][token][out_dim] = sum_val
         
-        # Reshape back: (batch_size, num_tokens, d_out)
-        out = out_2d.reshape(batch_size, num_tokens, self.weight.shape[0])
-        
-        if self.bias is not None:
-            out = out + self.bias
-            
         return out
