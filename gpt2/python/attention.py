@@ -7,14 +7,15 @@ def softmax(m):
     out = np.zeros((n_tokens_d1, n_tokens_d2))
 
     for i in range(n_tokens_d1):
+        max_val = np.max(m[i])
         sum = 0
         # first calculate the sum
         for j in range(n_tokens_d2):
-            sum += np.exp(m[i][j])
+            sum += np.exp(m[i][j] - max_val)
         
         # then divide each to get weight of 1
         for j in range(n_tokens_d2):
-            out[i][j] = np.exp(m[i][j]) / sum
+            out[i][j] = np.exp(m[i][j] - max_val) / sum
 
     return out
 
