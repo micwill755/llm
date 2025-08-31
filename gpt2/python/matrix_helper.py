@@ -36,17 +36,21 @@ def transpose_1d(arr, d_in, d_out):
 
 # mat mul should handle batches
 def mat_mul(m1, m2):
-    m_d_in, m_d_out = m1.shape
-    m2_d_in, m2_d_out = m2.shape
-    # out will be square the smallest dimension of m2
-    out = np.zeros((m_d_in, m2_d_out))
+    m1_rows, m1_cols = m1.shape
+    m2_rows, m2_cols = m2.shape
+    
+    # Check if matrices can be multiplied
+    if m1_cols != m2_rows:
+        raise ValueError(f"Cannot multiply matrices: ({m1_rows}, {m1_cols}) @ ({m2_rows}, {m2_cols})")
+    
+    out = np.zeros((m1_rows, m2_cols))
 
-    for row in range(m_d_in):
-        for col2 in range(m2_d_out):
+    for row in range(m1_rows):
+        for col in range(m2_cols):
             s = 0.0
-            for col in range(m_d_out):
-                s += float(m1[row][col] * m2[col][col2])
-            out[row][col2] = s
+            for k in range(m1_cols):  # Use m1_cols which equals m2_rows
+                s += float(m1[row][k] * m2[k][col])
+            out[row][col] = s
 
     return out
 
@@ -157,7 +161,8 @@ def apply_mask_nd(m, mask):
             apply_mask(m[batch][h], mask)  # Apply 2D mask to each head
 
 def combine_heads(m):
-    b, heads, num_tokens, head_dim = m.shape
+    # Always expect (batch, tokens, heads, head_dim) from our MultiHeadAttention
+    b, num_tokens, heads, head_dim = m.shape
     out = np.zeros((b, num_tokens, heads * head_dim))
 
     for batch in range(b):
@@ -165,8 +170,8 @@ def combine_heads(m):
             for head in range(heads):
                 start_dim = head * head_dim
                 for dim in range(head_dim):
-                    out[batch][token][start_dim + dim] = m[batch][head][token][dim]
-
+                    out[batch][token][start_dim + dim] = m[batch][token][head][dim]
+                    
     return out
 
 '''# create a 2d np array

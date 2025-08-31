@@ -8,17 +8,23 @@ class Linear:
     
     # y = mx + b
     def forward(self, x):
-        batch_size, num_tokens, emb_dim = x.shape
-        d_out = self.weight.shape[0]
-        out = np.zeros((batch_size, num_tokens, d_out))
-        
-        weight_t = transpose(self.weight)
-        
-        for batch in range(batch_size):
-            # Apply mat_mul to each batch's 2D slice
-            out[batch] = mat_mul(x[batch], weight_t)
-            
+        if len(x.shape) == 2:  # 2D input (tokens, emb_dim)
+            out = mat_mul(x, transpose(self.weight))
             if self.bias is not None:
-                out[batch] = out[batch] + self.bias
-        
-        return out
+                out = out + self.bias
+            return out
+        elif len(x.shape) == 3:  # 3D input (batch, tokens, emb_dim)
+            batch_size, num_tokens, emb_dim = x.shape
+            d_out = self.weight.shape[0]
+            out = np.zeros((batch_size, num_tokens, d_out))
+            
+            weight_t = transpose(self.weight)
+            
+            for batch in range(batch_size):
+                out[batch] = mat_mul(x[batch], weight_t)
+                if self.bias is not None:
+                    out[batch] = out[batch] + self.bias
+            
+            return out
+        else:
+            raise ValueError(f"Unsupported input shape: {x.shape}")

@@ -50,23 +50,17 @@ class SelfAttention:
 
     def forward(self, x):
         b, num_tokens, emd_dim = x.shape
-        results = []
 
-        # temp until we handle parallel
-        for i in range(b):
-            x_batch = x[i]
+        query_w = self.query.forward(x)
+        key_w = self.key.forward(x)
+        value_w = self.value.forward(x)
 
-            query_w = self.query.forward(x_batch)
-            key_w = self.key.forward(x_batch)
-            value_w = self.value.forward(x_batch)
-
-            att_scores = mat_mul(query_w, transpose(key_w))
-            attn_weights = softmax(att_scores)
-            context = mat_mul(attn_weights, value_w)
-            context = self.out_proj.forward(context)
-            results.append(context)
+        att_scores = mat_mul(query_w, transpose(key_w))
+        attn_weights = softmax(att_scores)
+        context = mat_mul(attn_weights, value_w)
+        context = self.out_proj.forward(context)
         
-        return np.stack(results, axis=0)
+        return context
             
 '''
 Causal Attention:
@@ -91,24 +85,18 @@ class CausalAttention:
 
     def forward(self, x):
         b, num_tokens, emd_dim = x.shape
-        results = []
 
-        # temp until we handle parallel
-        for i in range(b):
-            x_batch = x[i]
+        query_w = self.query.forward(x)
+        key_w = self.key.forward(x)
+        value_w = self.value.forward(x)
 
-            query_w = self.query.forward(x_batch)
-            key_w = self.key.forward(x_batch)
-            value_w = self.value.forward(x_batch)
-
-            att_scores = mat_mul(query_w, transpose(key_w))
-            apply_mask(att_scores, self.mask)
-            attn_weights = softmax(att_scores)
-            context = mat_mul(attn_weights, value_w)
-            context = self.out_proj.forward(context)
-            results.append(context)
-        
-        return np.stack(results, axis=0)
+        att_scores = mat_mul(query_w, transpose(key_w))
+        apply_mask(att_scores, self.mask)
+        attn_weights = softmax(att_scores)
+        context = mat_mul(attn_weights, value_w)
+        context = self.out_proj.forward(context)
+    
+        return context
 
 '''
 Scaled dot product Attention:
@@ -138,25 +126,19 @@ class ScaledDotProductAttention:
 
     def forward(self, x):
         b, num_tokens, emd_dim = x.shape
-        results = []
 
-        # temp until we handle parallel
-        for i in range(b):
-            x_batch = x[i]
+        query_w = self.query.forward(x)
+        key_w = self.key.forward(x)
+        value_w = self.value.forward(x)
 
-            query_w = self.query.forward(x_batch)
-            key_w = self.key.forward(x_batch)
-            value_w = self.value.forward(x_batch)
-
-            # we only add
-            att_scores = mat_mul(query_w, transpose(key_w)) / np.sqrt(self.d_out)
-            apply_mask(att_scores, self.mask)
-            attn_weights = softmax(att_scores)
-            context = mat_mul(attn_weights, value_w)
-            context = self.out_proj.forward(context)
-            results.append(context)
+        # we only add
+        att_scores = mat_mul(query_w, transpose(key_w)) / np.sqrt(self.d_out)
+        apply_mask(att_scores, self.mask)
+        attn_weights = softmax(att_scores)
+        context = mat_mul(attn_weights, value_w)
+        context = self.out_proj.forward(context)
         
-        return np.stack(results, axis=0)
+        return context
     
 
 # temp for demonstration
@@ -221,7 +203,6 @@ class MultiHeadAttention:
 
     def forward(self, x):
         b, num_tokens, emd_dim = x.shape
-        results = []
 
         # temp until we handle parallel
         query_w = self.query.forward(x)
@@ -251,7 +232,5 @@ class MultiHeadAttention:
         
         # we will then combine the heads to the original attention matrix [heads, tokens, head_dim] -> [tokens, heads * head_dim]
         combined = combine_heads(context)
-        o = self.out_proj.forward(combined)
-        results.append(o)
-        
-        return np.stack(results, axis=0)
+        context = self.out_proj.forward(combined)
+        return context

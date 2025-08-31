@@ -11,14 +11,13 @@ from linear import Linear
 
 class LayerNorm():
     def __init__(self, emb_dim):
-        super().__init__()
         self.eps = 1e-5
         self.scale = np.ones(emb_dim)
         self.shift = np.zeros(emb_dim)
 
     def forward(self, x):
-        mean = x.mean(dim=-1, keepdim=True)
-        var = x.var(dim=-1, keepdim=True, unbiased=False)
+        mean = np.mean(x, axis=-1, keepdims=True)
+        var = np.var(x, axis=-1, keepdims=True)
         norm_x = (x - mean) / np.sqrt(var + self.eps)
         return self.scale * norm_x + self.shift
 
@@ -26,18 +25,54 @@ class LayerNorm():
 
 ### BLOCKS
 
-class Block:
-    def __init__(self, cfg):
-        pass
-    
+class GELU():
     def forward(self, x):
+        return 0.5 * x * (1 + np.tanh(
+            np.sqrt(2.0 / np.pi) *
+            (x + 0.044715 * np.power(x, 3))
+        ))
+
+class FeedForward():
+    def __init__(self, cfg):
+        self.linear1 = Linear(cfg["emb_dim"], 4 * cfg["emb_dim"])
+        self.gelu = GELU()
+        self.linear2 = Linear(4 * cfg["emb_dim"], cfg["emb_dim"])
+
+    def forward(self, x):
+        x = self.linear1.forward(x)
+        x = self.gelu.forward(x)
+        x = self.linear2.forward(x)
         return x
 
-class LayerNorm:
-    def __init__(self, normalized_shape, eps=1e-5):
-        pass
-    
+class Block():
+    def __init__(self, cfg):
+        self.att = MultiHeadAttention(
+            d_in=cfg["emb_dim"],
+            d_out=cfg["emb_dim"],
+            context_length=cfg["context_length"],
+            num_heads=cfg["n_heads"],
+            dropout=cfg["drop_rate"],
+            qkv_bias=cfg["qkv_bias"])
+        self.ff = FeedForward(cfg)
+        self.norm1 = LayerNorm(cfg["emb_dim"])
+        self.norm2 = LayerNorm(cfg["emb_dim"])
+        #self.drop_shortcut = nn.Dropout(cfg["drop_rate"])
+
     def forward(self, x):
+        # Shortcut connection for attention block
+        shortcut = x
+        x = self.norm1.forward(x)
+        x = self.att.forward(x)   # Shape [batch_size, num_tokens, emb_size]
+        #x = self.drop_shortcut(x)
+        #x = x + shortcut  # Add the original input back
+
+        # Shortcut connection for feed-forward block
+        shortcut = x
+        x = self.norm2.forward(x)
+        x = self.ff.forward(x)
+        #x = self.drop_shortcut(x)
+        #x = x + shortcut  # Add the original input back
+
         return x
 
 class Embedding:
@@ -49,7 +84,7 @@ class Embedding:
 
 GPT_CONFIG_124M = {
     "vocab_size": 50257,
-    "context_length": 1024,
+    "context_length": 256,
     "emb_dim": 768,
     "n_heads": 12,
     "n_layers": 12,
@@ -93,38 +128,37 @@ print(res)
 attention = ScaledDotProductAttention(emd_dim, emd_dim, 5, 2)
 res = attention.forward(x)
 print('ScaledDotProductAttention')
-print(res)'''
+print(res)
 
 attention = MultiHeadAttention(emd_dim, emd_dim, 5, 2, num_heads)
 res = attention.forward(x)
 print('MultiHeadAttention')
-print(res)
+print(res)'''
 
 ### MAIN -------
 
-'''### Step 1: tokenzier
+### Step 1: tokenzier
 
 import tiktoken
-import torch
 tokenizer = tiktoken.get_encoding("gpt2")
 batch = []
 txt1 = "Every effort moves you"
 txt2 = "Every day holds a"
-batch.append(torch.tensor(tokenizer.encode(txt1)))
-batch.append(torch.tensor(tokenizer.encode(txt2)))
-batch = torch.stack(batch, dim=0)
+batch.append(np.array(tokenizer.encode(txt1)))
+batch.append(np.array(tokenizer.encode(txt2)))
+batch = np.stack(batch, axis=0)
 print(batch)
 
 ### Step 1: tokenzier
 
 ### Step 2: initialize a model
 
-torch.manual_seed(123)
+np.random.seed(123)
 model = GPT2Model(GPT_CONFIG_124M)
-logits = model(batch)
+logits = model.forward(batch)
 print(f'Output shape {logits.shape}')
 print(logits)
 
 ### Step 2: initialize a model
 
-### MAIN -------'''
+### MAIN -------
