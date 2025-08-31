@@ -3,5 +3,8 @@ __pycache__/
 *.pyc
 *.pyo
 
+# macOS files
+.DS_Store
+
 # Log files
 *.log
