@@ -2,13 +2,6 @@ import numpy as np
 from attention import CausalAttention, ScaledDotProductAttention, MultiHeadAttention
 from linear import Linear
 
-### Ma
-
-### LAYER NORMALIZATION
-
-
-### LAYER NORMALIZATION
-
 class LayerNorm():
     def __init__(self, emb_dim):
         self.eps = 1e-5
@@ -20,10 +13,6 @@ class LayerNorm():
         var = np.var(x, axis=-1, keepdims=True)
         norm_x = (x - mean) / np.sqrt(var + self.eps)
         return self.scale * norm_x + self.shift
-
-### LAYER NORMALIZATION
-
-### BLOCKS
 
 class GELU():
     def forward(self, x):
@@ -111,16 +100,14 @@ class GPT2Model:
         logits = self.out_head.forward(x)
         return logits
 
-### MODEL
-
-### Attention test
+'''
 
 np.random.seed(42)
 emd_dim = 512
 num_heads = 5
 x = np.random.randn(1, 3, emd_dim)  # (batch_size=1, num_tokens=3, emb_dim=5)
 
-'''attention = CausalAttention(emd_dim, emd_dim, 5, 2)
+attention = CausalAttention(emd_dim, emd_dim, 5, 2)
 res = attention.forward(x)
 print('CausalAttention')
 print(res)
@@ -134,8 +121,6 @@ attention = MultiHeadAttention(emd_dim, emd_dim, 5, 2, num_heads)
 res = attention.forward(x)
 print('MultiHeadAttention')
 print(res)'''
-
-### MAIN -------
 
 ### Step 1: tokenzier
 
