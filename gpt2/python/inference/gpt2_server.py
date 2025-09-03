@@ -90,6 +90,10 @@ class GPT2Server:
         self._request_queue = deque()
         self._lock = threading.Lock()
         self._running = True
+        self._model_lock = None
+        self._processor_task = None
+    
+    async def start(self):
         self._model_lock = asyncio.Lock()
         self._processor_task = asyncio.create_task(self._process_requests())
 
@@ -110,6 +114,8 @@ class GPT2Server:
         return await future
 
     async def _generate_direct(self, prompts: List[str], max_tokens: int, temperature: float) -> List[str]:
+        if self._model_lock is None:
+            self._model_lock = asyncio.Lock()
         async with self._model_lock:
             return await asyncio.get_event_loop().run_in_executor(
                 None, self._model.generate_batch, prompts, max_tokens, temperature
@@ -188,6 +194,7 @@ if __name__ == '__main__':
     # Start asyncio loop in background thread
     def run_loop():
         asyncio.set_event_loop(loop)
+        loop.run_until_complete(gpt2_server.start())
         loop.run_forever()
     
     threading.Thread(target=run_loop, daemon=True).start()
