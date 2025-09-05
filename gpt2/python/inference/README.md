@@ -1,6 +1,6 @@
 # GPT-2 Inference Server
 
-A concurrent inference server for the custom GPT-2 implementation, following the embedding server pattern.
+A concurrent inference server for the custom GPT-2 implementation.
 
 ## Features
 
