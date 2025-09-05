@@ -40,6 +40,8 @@ for module in model.modules():
         prune.l1_unstructured(module, name='weight', amount=0.3)
 ```
 
+*See [MODEL_PRUNING_GUIDE.md](MODEL_PRUNING_GUIDE.md) for comprehensive pruning strategies*
+
 ### Knowledge Distillation
 **Train smaller model to mimic larger one**
 

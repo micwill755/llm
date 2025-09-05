@@ -2,29 +2,20 @@ The key differences between the three parallelism strategies:
 
 Model Parallelism (Vertical Split)
 What: Split layers across GPUs
-
 Example: GPU0 has layers 1-6, GPU1 has layers 7-12
-
 Flow: Sequential - data flows GPU0 → GPU1 → GPU2
-
 Best for: When model doesn't fit on single GPU
 
 Tensor Parallelism (Horizontal Split)
 What: Split operations within each layer
-
 Example: Each GPU handles 2 attention heads out of 8 total
-
 Flow: Parallel - all GPUs work on same layer simultaneously
-
 Best for: Maximum compute efficiency
 
 Pipeline Parallelism (Batch Split)
 What: Different GPUs process different batches/microbatches
-
 Example: GPU0 processes batch1 while GPU1 processes batch2
-
 Flow: Overlapped - like an assembly line
-
 Best for: High throughput serving
 
 Real-World Usage:
